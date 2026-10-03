@@ -20,10 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const fchars = document.getElementById("fchars");
   const fdur = document.getElementById("fdur");
 
-  // --------------------------------------------------
-  // WORD BANK
-  // --------------------------------------------------
-
   const wordBank = [
     "the","and","you","that","was","for","are","with","this","have",
     "from","they","will","would","there","their","what","about","which",
@@ -39,47 +35,35 @@ document.addEventListener("DOMContentLoaded", () => {
     "keep","start","hand","part","turn","need","important","different",
     "change","system","between","point","again","something","always",
     "house","school","family","country","company","number","group",
-    "problem","money","question","water","room","area","business",
-    "story","today","night","friend","children","follow","during",
-    "without","under","early","example","together","until","once",
-    "possible","better","however","really","anything","nothing",
-    "enough","almost","away","left","kind","sure","next","high",
-    "old","young","best","public","open","line","end","begin","move",
-    "read","write","learn","understand","remember","answer","create",
-    "build","try","continue","close","show","tell","call","provide",
-    "service","information","program","website","online","computer"
+    "problem","money","room","area","business","story","today","night",
+    "friend","children","follow","during","without","under","early",
+    "example","together","until","once","possible","better","however",
+    "really","anything","nothing","enough","almost","away","left",
+    "kind","sure","next","high","old","young","best","public","open",
+    "line","end","begin","move","read","write","learn","understand",
+    "remember","answer","create","build","try","continue","close",
+    "show","tell","call","provide","service","information","program",
+    "website","online","computer"
   ];
 
-  // --------------------------------------------------
-  // SETTINGS
-  // --------------------------------------------------
+  let words = [];
+  let currentWord = 0;
 
   let duration = 30;
-  let words = [];
-
-  let currentWord = 0;
-  let totalTyped = 0;
-  let correctTyped = 0;
-  let totalErrors = 0;
+  let timeLeft = 30;
 
   let started = false;
   let finished = false;
-
-  let timeLeft = duration;
   let timer = null;
 
-  // The number of words that belong to the
-  // current visual line.
-  let lineStarts = [];
+  let typedCharacters = 0;
+  let correctCharacters = 0;
+  let errorCount = 0;
 
-  // --------------------------------------------------
-  // GENERATE WORDS
-  // --------------------------------------------------
-
-  function generateWords(amount = 300) {
+  function makeWords(count = 300) {
     const result = [];
 
-    for (let i = 0; i < amount; i++) {
+    for (let i = 0; i < count; i++) {
       result.push(
         wordBank[Math.floor(Math.random() * wordBank.length)]
       );
@@ -88,11 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return result;
   }
 
-  // --------------------------------------------------
-  // BUILD PASSAGE
-  // --------------------------------------------------
-
-  function buildPassage() {
+  function renderWords() {
     display.innerHTML = "";
 
     words.forEach((word, index) => {
@@ -109,261 +89,41 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Wait until the browser has laid out the text.
-    requestAnimationFrame(() => {
-      calculateLines();
-      updateCurrentWord();
-    });
+    markCurrentWord();
   }
 
-  // --------------------------------------------------
-  // CALCULATE VISUAL LINES
-  // --------------------------------------------------
+  function markCurrentWord() {
+    display
+      .querySelectorAll(".word")
+      .forEach((word, index) => {
+        word.classList.remove("current");
 
-  function calculateLines() {
-    const wordElements = [...display.querySelectorAll(".word")];
-
-    lineStarts = [];
-
-    let previousTop = null;
-
-    wordElements.forEach((word, index) => {
-      const top = Math.round(word.offsetTop);
-
-      if (previousTop === null || top !== previousTop) {
-        lineStarts.push(index);
-        previousTop = top;
-      }
-    });
-  }
-
-  // --------------------------------------------------
-  // CURRENT LINE
-  // --------------------------------------------------
-
-  function getCurrentLine() {
-    let line = 0;
-
-    for (let i = 0; i < lineStarts.length; i++) {
-      if (currentWord >= lineStarts[i]) {
-        line = i;
-      }
-    }
-
-    return line;
-  }
-
-  // --------------------------------------------------
-  // KEEP CURRENT LINE IN PLACE
-  // --------------------------------------------------
-
-  function updateCurrentWord() {
-    const wordElements = display.querySelectorAll(".word");
-
-    wordElements.forEach((word, index) => {
-      word.classList.remove(
-        "current",
-        "correct",
-        "wrong"
-      );
-
-      if (index === currentWord) {
-        word.classList.add("current");
-      }
-    });
-  }
-
-  // --------------------------------------------------
-  // ROLL TO NEXT LINE
-  // --------------------------------------------------
-
-  function rollToLine(lineNumber) {
-    const wordElements = display.querySelectorAll(".word");
-
-    if (!wordElements.length) return;
-
-    const targetIndex = lineStarts[lineNumber];
-
-    if (targetIndex === undefined) return;
-
-    const targetWord = wordElements[targetIndex];
-
-    // The amount the passage needs to move upward.
-    const amount = targetWord.offsetTop;
-
-    display.style.transition = "transform 280ms ease";
-    display.style.transform = `translateY(-${amount}px)`;
-  }
-
-  // --------------------------------------------------
-  // HANDLE INPUT
-  // --------------------------------------------------
-
-  function handleInput() {
-    if (!started || finished) return;
-
-    const typed = input.value;
-    const target = words[currentWord];
-
-    if (!target) {
-      finishTest();
-      return;
-    }
-
-    // Prevent typing beyond the word.
-    if (typed.length > target.length) {
-      input.value = typed.slice(0, target.length);
-      return;
-    }
-
-    // Count this word's characters.
-    totalTyped = 0;
-    correctTyped = 0;
-    totalErrors = 0;
-
-    // Completed words.
-    for (let i = 0; i < currentWord; i++) {
-      totalTyped += words[i].length;
-      correctTyped += words[i].length;
-    }
-
-    // Current word.
-    totalTyped += typed.length;
-
-    for (let i = 0; i < typed.length; i++) {
-      if (typed[i] === target[i]) {
-        correctTyped++;
-      } else {
-        totalErrors++;
-      }
-    }
-
-    // Update current word appearance.
-    const currentElement =
-      display.querySelector(
-        `.word[data-index="${currentWord}"]`
-      );
-
-    if (currentElement) {
-      currentElement.classList.remove("wrong");
-
-      if (
-        typed.length > 0 &&
-        typed !== target.substring(0, typed.length)
-      ) {
-        currentElement.classList.add("wrong");
-      }
-    }
-
-    // ------------------------------------------------
-    // WORD FINISHED
-    // ------------------------------------------------
-
-    if (typed === target) {
-      currentElement?.classList.remove("current");
-      currentElement?.classList.add("correct");
-
-      currentWord++;
-
-      input.value = "";
-
-      // Determine whether we moved onto a new line.
-      const oldLine = getCurrentLine();
-
-      requestAnimationFrame(() => {
-        const newLine = getCurrentLine();
-
-        if (newLine > oldLine) {
-          rollToLine(newLine);
+        if (index === currentWord) {
+          word.classList.add("current");
         }
-
-        updateCurrentWord();
       });
-
-      if (currentWord >= words.length - 1) {
-        finishTest();
-        return;
-      }
-    }
-
-    updateStats();
   }
-
-  // --------------------------------------------------
-  // SPACE KEY
-  // --------------------------------------------------
-
-  function handleKeydown(event) {
-    if (!started || finished) return;
-
-    if (event.key === " ") {
-      event.preventDefault();
-
-      const typed = input.value;
-      const target = words[currentWord];
-
-      // Only advance when the word is completely correct.
-      if (typed === target) {
-        input.value = "";
-
-        const currentElement =
-          display.querySelector(
-            `.word[data-index="${currentWord}"]`
-          );
-
-        currentElement?.classList.remove("current");
-        currentElement?.classList.add("correct");
-
-        const oldLine = getCurrentLine();
-
-        currentWord++;
-
-        requestAnimationFrame(() => {
-          const newLine = getCurrentLine();
-
-          if (newLine > oldLine) {
-            rollToLine(newLine);
-          }
-
-          updateCurrentWord();
-        });
-      }
-    }
-  }
-
-  // --------------------------------------------------
-  // STATS
-  // --------------------------------------------------
 
   function updateStats() {
-    const elapsed = Math.max(
-      1,
-      duration - timeLeft
-    );
-
+    const elapsed = Math.max(1, duration - timeLeft);
     const minutes = elapsed / 60;
 
-    const wpm =
-      minutes > 0
-        ? Math.round((correctTyped / 5) / minutes)
-        : 0;
+    const wpm = Math.round(
+      (correctCharacters / 5) / minutes
+    );
 
     const accuracy =
-      totalTyped > 0
-        ? Math.round(
-            (correctTyped / totalTyped) * 100
-          )
-        : 100;
+      typedCharacters === 0
+        ? 100
+        : Math.round(
+            (correctCharacters / typedCharacters) * 100
+          );
 
-    wpmEl.textContent = wpm;
-    accuracyEl.textContent = accuracy + "%";
-    errorsEl.textContent = totalErrors;
     timeEl.textContent = timeLeft;
+    wpmEl.textContent = Math.max(0, wpm);
+    accuracyEl.textContent = accuracy + "%";
+    errorsEl.textContent = errorCount;
   }
-
-  // --------------------------------------------------
-  // START
-  // --------------------------------------------------
 
   function startTest() {
     clearInterval(timer);
@@ -373,22 +133,22 @@ document.addEventListener("DOMContentLoaded", () => {
       10
     );
 
-    words = generateWords(300);
+    timeLeft = duration;
+
+    words = makeWords();
 
     currentWord = 0;
-    totalTyped = 0;
-    correctTyped = 0;
-    totalErrors = 0;
-
-    timeLeft = duration;
+    typedCharacters = 0;
+    correctCharacters = 0;
+    errorCount = 0;
 
     started = true;
     finished = false;
 
-    display.style.transition = "none";
     display.style.transform = "translateY(0)";
+    display.style.transition = "none";
 
-    buildPassage();
+    renderWords();
 
     input.disabled = false;
     input.value = "";
@@ -409,10 +169,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 1000);
   }
 
-  // --------------------------------------------------
-  // FINISH
-  // --------------------------------------------------
-
   function finishTest() {
     if (finished) return;
 
@@ -428,15 +184,71 @@ document.addEventListener("DOMContentLoaded", () => {
     fwpm.textContent = wpmEl.textContent;
     facc.textContent = accuracyEl.textContent;
     ferr.textContent = errorsEl.textContent;
-    fchars.textContent = totalTyped;
+    fchars.textContent = typedCharacters;
     fdur.textContent = duration + "s";
 
     results.classList.remove("hidden");
   }
 
-  // --------------------------------------------------
-  // RESET
-  // --------------------------------------------------
+  function handleInput() {
+    if (!started || finished) return;
+
+    const typed = input.value;
+    const target = words[currentWord];
+
+    typedCharacters = 0;
+    correctCharacters = 0;
+    errorCount = 0;
+
+    for (let i = 0; i < currentWord; i++) {
+      typedCharacters += words[i].length;
+      correctCharacters += words[i].length;
+    }
+
+    typedCharacters += typed.length;
+
+    for (let i = 0; i < typed.length; i++) {
+      if (typed[i] === target[i]) {
+        correctCharacters++;
+      } else {
+        errorCount++;
+      }
+    }
+
+    const current = display.querySelector(
+      `.word[data-index="${currentWord}"]`
+    );
+
+    if (current) {
+      current.classList.remove("wrong");
+
+      if (
+        typed.length > 0 &&
+        typed !== target.substring(0, typed.length)
+      ) {
+        current.classList.add("wrong");
+      }
+    }
+
+    if (typed === target) {
+      if (current) {
+        current.classList.remove("current");
+        current.classList.add("correct");
+      }
+
+      currentWord++;
+
+      input.value = "";
+
+      markCurrentWord();
+
+      if (currentWord >= words.length) {
+        finishTest();
+      }
+    }
+
+    updateStats();
+  }
 
   function resetTest() {
     clearInterval(timer);
@@ -445,36 +257,30 @@ document.addEventListener("DOMContentLoaded", () => {
     finished = false;
 
     currentWord = 0;
-    totalTyped = 0;
-    correctTyped = 0;
-    totalErrors = 0;
+    typedCharacters = 0;
+    correctCharacters = 0;
+    errorCount = 0;
 
     timeLeft = duration;
 
     input.value = "";
     input.disabled = true;
 
-    display.style.transition = "none";
     display.style.transform = "translateY(0)";
+    display.style.transition = "none";
 
-    words = generateWords(300);
-    buildPassage();
+    words = makeWords();
+
+    renderWords();
 
     results.classList.add("hidden");
 
     updateStats();
   }
 
-  // --------------------------------------------------
-  // DURATION BUTTONS
-  // --------------------------------------------------
-
   timeButtons.forEach(button => {
     button.addEventListener("click", () => {
-      timeButtons.forEach(b =>
-        b.classList.remove("active")
-      );
-
+      timeButtons.forEach(b => b.classList.remove("active"));
       button.classList.add("active");
 
       if (!started) {
@@ -485,51 +291,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // --------------------------------------------------
-  // MODE BUTTONS
-  // --------------------------------------------------
-
   modeButtons.forEach(button => {
     button.addEventListener("click", () => {
-      modeButtons.forEach(b =>
-        b.classList.remove("active")
-      );
-
+      modeButtons.forEach(b => b.classList.remove("active"));
       button.classList.add("active");
     });
   });
 
-  // --------------------------------------------------
-  // EVENTS
-  // --------------------------------------------------
-
   input.addEventListener("input", handleInput);
-  input.addEventListener("keydown", handleKeydown);
 
   restartBtn.addEventListener("click", resetTest);
 
-  againBtn.addEventListener("click", () => {
-    results.classList.add("hidden");
-    startTest();
-  });
+  againBtn.addEventListener("click", startTest);
 
-  // --------------------------------------------------
-  // INITIAL STATE
-  // --------------------------------------------------
-
-  duration = 30;
-  timeLeft = 30;
-
-  words = generateWords(300);
-
+  // Initial page
+  words = makeWords();
   input.disabled = true;
 
-  buildPassage();
+  renderWords();
   updateStats();
 });
-
- 
- 
- 
- 
- 
