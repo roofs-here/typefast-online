@@ -1,5 +1,6 @@
 ```javascript
 document.addEventListener("DOMContentLoaded", function () {
+
   const display = document.getElementById("display");
   const input = document.getElementById("input");
 
@@ -15,6 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const modeButtons = document.querySelectorAll(".tabs button");
 
   const results = document.getElementById("results");
+
   const fwpm = document.getElementById("fwpm");
   const facc = document.getElementById("facc");
   const ferr = document.getElementById("ferr");
@@ -55,89 +57,156 @@ document.addEventListener("DOMContentLoaded", function () {
 
   let started = false;
   let finished = false;
+
   let timer = null;
 
   let typedCharacters = 0;
   let correctCharacters = 0;
   let errorCount = 0;
 
+
+  // -----------------------------
+  // GENERATE WORDS
+  // -----------------------------
+
   function generateWords(count) {
+
     const list = [];
 
     for (let i = 0; i < count; i++) {
-      const randomIndex = Math.floor(Math.random() * wordBank.length);
-      list.push(wordBank[randomIndex]);
+
+      const random =
+        Math.floor(Math.random() * wordBank.length);
+
+      list.push(wordBank[random]);
     }
 
     return list;
   }
 
+
+  // -----------------------------
+  // DISPLAY WORDS
+  // -----------------------------
+
   function renderWords() {
+
     display.innerHTML = "";
 
-    for (let i = 0; i < words.length; i++) {
+    words.forEach(function (word, index) {
+
       const span = document.createElement("span");
 
       span.className = "word";
-      span.dataset.index = i;
-      span.textContent = words[i];
+      span.dataset.index = index;
+      span.textContent = word;
 
       display.appendChild(span);
 
-      if (i < words.length - 1) {
-        display.appendChild(document.createTextNode(" "));
+      if (index < words.length - 1) {
+        display.appendChild(
+          document.createTextNode(" ")
+        );
       }
-    }
+
+    });
 
     updateCurrentWord();
   }
 
+
+  // -----------------------------
+  // CURRENT WORD
+  // -----------------------------
+
   function updateCurrentWord() {
-    const wordElements = display.querySelectorAll(".word");
+
+    const wordElements =
+      display.querySelectorAll(".word");
 
     wordElements.forEach(function (word, index) {
+
       word.classList.remove("current");
 
       if (index === currentWord) {
         word.classList.add("current");
       }
+
     });
   }
 
-  function calculateStats() {
-    const elapsedSeconds = Math.max(1, duration - timeLeft);
-    const minutes = elapsedSeconds / 60;
 
-    const wpm = Math.round((correctCharacters / 5) / minutes);
+  // -----------------------------
+  // STATS
+  // -----------------------------
+
+  function updateStats() {
+
+    const elapsed =
+      Math.max(1, duration - timeLeft);
+
+    const minutes = elapsed / 60;
+
+    const wpm =
+      Math.round(
+        (correctCharacters / 5) / minutes
+      );
 
     let accuracy = 100;
 
     if (typedCharacters > 0) {
-      accuracy = Math.round(
-        (correctCharacters / typedCharacters) * 100
-      );
+
+      accuracy =
+        Math.round(
+          (correctCharacters /
+            typedCharacters) * 100
+        );
+
     }
 
     timeEl.textContent = timeLeft;
-    wpmEl.textContent = Math.max(0, wpm);
-    accuracyEl.textContent = accuracy + "%";
-    errorsEl.textContent = errorCount;
+
+    wpmEl.textContent =
+      Math.max(0, wpm);
+
+    accuracyEl.textContent =
+      accuracy + "%";
+
+    errorsEl.textContent =
+      errorCount;
   }
 
+
+  // -----------------------------
+  // START TEST
+  // -----------------------------
+
   function startTest() {
+
     clearInterval(timer);
 
-    const activeButton = document.querySelector(".dur button.active");
+    const active =
+      document.querySelector(
+        ".dur button.active"
+      );
 
-    if (activeButton) {
-      duration = parseInt(activeButton.dataset.time, 10);
+    if (active) {
+
+      duration =
+        parseInt(
+          active.dataset.time,
+          10
+        );
+
     }
 
     timeLeft = duration;
 
-    words = generateWords(300);
+    words =
+      generateWords(300);
 
     currentWord = 0;
+
     typedCharacters = 0;
     correctCharacters = 0;
     errorCount = 0;
@@ -145,77 +214,160 @@ document.addEventListener("DOMContentLoaded", function () {
     started = true;
     finished = false;
 
-    display.style.transform = "translateY(0)";
-    display.style.transition = "none";
+    display.style.transform =
+      "translateY(0)";
+
+    display.style.transition =
+      "none";
 
     renderWords();
 
-    input.value = "";
     input.disabled = false;
-    input.focus();
+
+    input.value = "";
 
     results.classList.add("hidden");
 
-    calculateStats();
+    updateStats();
+
+    input.focus();
+
 
     timer = setInterval(function () {
+
       timeLeft--;
 
-      calculateStats();
+      updateStats();
 
       if (timeLeft <= 0) {
+
         finishTest();
+
       }
+
     }, 1000);
+
   }
 
+
+  // -----------------------------
+  // TYPING
+  // -----------------------------
+
   function handleTyping() {
+
     if (!started || finished) {
       return;
     }
 
-    const typed = input.value;
-    const target = words[currentWord];
+    const typed =
+      input.value;
+
+    const target =
+      words[currentWord];
+
+
+    // Count completed words
 
     typedCharacters = 0;
     correctCharacters = 0;
     errorCount = 0;
 
-    for (let i = 0; i < currentWord; i++) {
-      typedCharacters += words[i].length;
-      correctCharacters += words[i].length;
+
+    for (
+      let i = 0;
+      i < currentWord;
+      i++
+    ) {
+
+      typedCharacters +=
+        words[i].length;
+
+      correctCharacters +=
+        words[i].length;
+
     }
 
-    typedCharacters += typed.length;
 
-    for (let i = 0; i < typed.length; i++) {
-      if (typed[i] === target[i]) {
+    // Current word
+
+    typedCharacters +=
+      typed.length;
+
+
+    for (
+      let i = 0;
+      i < typed.length;
+      i++
+    ) {
+
+      if (
+        typed[i] === target[i]
+      ) {
+
         correctCharacters++;
+
       } else {
+
         errorCount++;
+
       }
+
     }
 
-    const currentElement = display.querySelector(
-      '.word[data-index="' + currentWord + '"]'
-    );
 
-    if (currentElement) {
-      currentElement.classList.remove("wrong");
+    // Current word display
+
+    const current =
+      display.querySelector(
+        '.word[data-index="' +
+        currentWord +
+        '"]'
+      );
+
+
+    if (current) {
+
+      current.classList.remove(
+        "wrong"
+      );
 
       if (
         typed.length > 0 &&
-        typed !== target.substring(0, typed.length)
+        typed !==
+          target.substring(
+            0,
+            typed.length
+          )
       ) {
-        currentElement.classList.add("wrong");
+
+        current.classList.add(
+          "wrong"
+        );
+
       }
+
     }
 
+
+    // Word completed
+
     if (typed === target) {
-      if (currentElement) {
-        currentElement.classList.remove("current");
-        currentElement.classList.remove("wrong");
-        currentElement.classList.add("correct");
+
+      if (current) {
+
+        current.classList.remove(
+          "current"
+        );
+
+        current.classList.remove(
+          "wrong"
+        );
+
+        current.classList.add(
+          "correct"
+        );
+
       }
 
       currentWord++;
@@ -224,16 +376,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
       updateCurrentWord();
 
-      if (currentWord >= words.length) {
+
+      if (
+        currentWord >= words.length
+      ) {
+
         finishTest();
-        return;
+
       }
+
     }
 
-    calculateStats();
+
+    updateStats();
+
   }
 
+
+  // -----------------------------
+  // FINISH
+  // -----------------------------
+
   function finishTest() {
+
     if (finished) {
       return;
     }
@@ -245,24 +410,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
     input.disabled = true;
 
-    calculateStats();
+    updateStats();
 
-    fwpm.textContent = wpmEl.textContent;
-    facc.textContent = accuracyEl.textContent;
-    ferr.textContent = errorsEl.textContent;
-    fchars.textContent = typedCharacters;
-    fdur.textContent = duration + "s";
+    fwpm.textContent =
+      wpmEl.textContent;
 
-    results.classList.remove("hidden");
+    facc.textContent =
+      accuracyEl.textContent;
+
+    ferr.textContent =
+      errorsEl.textContent;
+
+    fchars.textContent =
+      typedCharacters;
+
+    fdur.textContent =
+      duration + "s";
+
+    results.classList.remove(
+      "hidden"
+    );
+
   }
 
+
+  // -----------------------------
+  // RESET
+  // -----------------------------
+
   function resetTest() {
+
     clearInterval(timer);
 
     started = false;
     finished = false;
 
     currentWord = 0;
+
     typedCharacters = 0;
     correctCharacters = 0;
     errorCount = 0;
@@ -270,57 +454,165 @@ document.addEventListener("DOMContentLoaded", function () {
     timeLeft = duration;
 
     input.value = "";
-    input.disabled = true;
 
-    display.style.transform = "translateY(0)";
-    display.style.transition = "none";
+    input.disabled = false;
 
-    words = generateWords(300);
+    display.style.transform =
+      "translateY(0)";
+
+    display.style.transition =
+      "none";
+
+    words =
+      generateWords(300);
 
     renderWords();
 
-    results.classList.add("hidden");
+    results.classList.add(
+      "hidden"
+    );
 
-    calculateStats();
+    updateStats();
+
   }
 
-  timeButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      timeButtons.forEach(function (item) {
-        item.classList.remove("active");
-      });
 
-      button.classList.add("active");
+  // -----------------------------
+  // TIME BUTTONS
+  // -----------------------------
 
-      if (!started) {
-        duration = parseInt(button.dataset.time, 10);
-        timeLeft = duration;
-        calculateStats();
+  timeButtons.forEach(
+    function (button) {
+
+      button.addEventListener(
+        "click",
+        function () {
+
+          timeButtons.forEach(
+            function (item) {
+              item.classList.remove(
+                "active"
+              );
+            }
+          );
+
+          button.classList.add(
+            "active"
+          );
+
+
+          if (!started) {
+
+            duration =
+              parseInt(
+                button.dataset.time,
+                10
+              );
+
+            timeLeft =
+              duration;
+
+            updateStats();
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  // -----------------------------
+  // WORDS / NUMBERS BUTTONS
+  // -----------------------------
+
+  modeButtons.forEach(
+    function (button) {
+
+      button.addEventListener(
+        "click",
+        function () {
+
+          modeButtons.forEach(
+            function (item) {
+
+              item.classList.remove(
+                "active"
+              );
+
+            }
+          );
+
+          button.classList.add(
+            "active"
+          );
+
+        }
+      );
+
+    }
+  );
+
+
+  // -----------------------------
+  // START WHEN TEXT BOX IS CLICKED
+  // -----------------------------
+
+  input.addEventListener(
+    "focus",
+    function () {
+
+      if (!started && !finished) {
+        startTest();
       }
-    });
-  });
 
-  modeButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      modeButtons.forEach(function (item) {
-        item.classList.remove("active");
-      });
+    }
+  );
 
-      button.classList.add("active");
-    });
-  });
 
-  input.addEventListener("input", handleTyping);
+  // -----------------------------
+  // TYPING EVENT
+  // -----------------------------
 
-  restartBtn.addEventListener("click", resetTest);
+  input.addEventListener(
+    "input",
+    handleTyping
+  );
 
-  againBtn.addEventListener("click", startTest);
 
-  words = generateWords(300);
+  // -----------------------------
+  // RESTART
+  // -----------------------------
 
-  input.disabled = true;
+  restartBtn.addEventListener(
+    "click",
+    resetTest
+  );
+
+
+  // -----------------------------
+  // TRY AGAIN
+  // -----------------------------
+
+  againBtn.addEventListener(
+    "click",
+    startTest
+  );
+
+
+  // -----------------------------
+  // INITIAL PAGE
+  // -----------------------------
+
+  words =
+    generateWords(300);
+
+  input.disabled = false;
 
   renderWords();
-  calculateStats();
+
+  updateStats();
+
 });
 ```
