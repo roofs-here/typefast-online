@@ -19,14 +19,22 @@ function buildText(){
     return Array(10).fill(null)
         .map(()=>words[Math.floor(Math.random()*words.length)])
         .join(' ');
-}
-
 function render(){
     let v=input.value;
+    const display=$('#display');
 
-    $('#display').innerHTML=[...text].map((c,i)=>
+    display.innerHTML=[...text].map((c,i)=>
         `<span class="${i<v.length?(v[i]===c?'correct':'wrong'):(i===v.length?'current':'')}">${c}</span>`
     ).join('');
+
+    const current=display.querySelector('.current');
+
+    if(current){
+        current.scrollIntoView({
+            block:'center',
+            behavior:'smooth'
+        });
+    }
 }
 
 function calc(){
