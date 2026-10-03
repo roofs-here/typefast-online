@@ -1,370 +1,286 @@
-```javascript
 document.addEventListener("DOMContentLoaded", () => {
-  const textDisplay = document.getElementById("text-display");
-  const input = document.getElementById("typing-input");
-  const timeSelect = document.getElementById("time-select");
-  const startButton = document.getElementById("start-btn");
-  const resetButton = document.getElementById("reset-btn");
-  const timeDisplay = document.getElementById("timer");
-  const wpmDisplay = document.getElementById("wpm");
-  const accuracyDisplay = document.getElementById("accuracy");
+  const display = document.getElementById("display");
+  const input = document.getElementById("input");
+
+  const timeEl = document.getElementById("time");
+  const wpmEl = document.getElementById("wpm");
+  const accuracyEl = document.getElementById("accuracy");
+  const errorsEl = document.getElementById("errors");
+
+  const restartBtn = document.getElementById("restart");
+  const againBtn = document.getElementById("again");
+
+  const timeButtons = document.querySelectorAll(".dur button");
+  const modeButtons = document.querySelectorAll(".tabs button");
+
+  const results = document.getElementById("results");
+  const fwpm = document.getElementById("fwpm");
+  const facc = document.getElementById("facc");
+  const ferr = document.getElementById("ferr");
+  const fchars = document.getElementById("fchars");
+  const fdur = document.getElementById("fdur");
 
   // --------------------------------------------------
   // WORD BANK
   // --------------------------------------------------
 
-  const words = [
-    "the", "and", "you", "that", "was", "for", "are", "with", "this",
-    "have", "from", "they", "will", "would", "there", "their", "what",
-    "about", "which", "when", "make", "can", "like", "time", "just",
-    "know", "take", "people", "into", "year", "your", "good", "some",
-    "could", "them", "see", "other", "than", "then", "now", "look",
-    "only", "come", "its", "over", "think", "also", "back", "after",
-    "use", "two", "how", "our", "work", "first", "well", "way",
-    "even", "new", "want", "because", "these", "give", "day", "most",
-    "us", "find", "here", "thing", "many", "more", "very", "where",
-    "much", "before", "right", "through", "too", "same", "around",
-    "still", "while", "last", "never", "another", "place", "life",
-    "little", "world", "great", "home", "small", "every", "found",
-    "those", "long", "help", "keep", "start", "hand", "part", "turn",
-    "need", "important", "different", "change", "system", "between",
-    "point", "again", "something", "always", "house", "school",
-    "family", "country", "company", "number", "group", "problem",
-    "money", "question", "water", "room", "area", "business", "story",
-    "today", "night", "friend", "children", "follow", "during",
-    "without", "under", "another", "early", "example", "together",
-    "until", "once", "possible", "better", "however", "really",
-    "anything", "nothing", "enough", "almost", "away", "left",
-    "kind", "different", "sure", "next", "high", "old", "young",
-    "important", "few", "large", "best", "public", "open", "line",
-    "end", "begin", "move", "read", "write", "learn", "understand",
-    "remember", "answer", "question", "create", "build", "try",
-    "continue", "close", "follow", "show", "tell", "call", "provide",
-    "service", "information", "program", "website", "online", "computer"
+  const wordBank = [
+    "the","and","you","that","was","for","are","with","this","have",
+    "from","they","will","would","there","their","what","about","which",
+    "when","make","can","like","time","just","know","take","people",
+    "into","year","your","good","some","could","them","see","other",
+    "than","then","now","look","only","come","its","over","think",
+    "also","back","after","use","two","how","our","work","first",
+    "well","way","even","new","want","because","these","give","day",
+    "most","us","find","here","thing","many","more","very","where",
+    "much","before","right","through","too","same","around","still",
+    "while","last","never","another","place","life","little","world",
+    "great","home","small","every","found","those","long","help",
+    "keep","start","hand","part","turn","need","important","different",
+    "change","system","between","point","again","something","always",
+    "house","school","family","country","company","number","group",
+    "problem","money","question","water","room","area","business",
+    "story","today","night","friend","children","follow","during",
+    "without","under","early","example","together","until","once",
+    "possible","better","however","really","anything","nothing",
+    "enough","almost","away","left","kind","sure","next","high",
+    "old","young","best","public","open","line","end","begin","move",
+    "read","write","learn","understand","remember","answer","create",
+    "build","try","continue","close","show","tell","call","provide",
+    "service","information","program","website","online","computer"
   ];
 
   // --------------------------------------------------
   // SETTINGS
   // --------------------------------------------------
 
-  let testDuration = parseInt(timeSelect?.value || "60", 10);
+  let duration = 30;
+  let words = [];
 
-  let testWords = [];
-  let currentWordIndex = 0;
-  let typedCharacters = 0;
-  let correctCharacters = 0;
-  let errors = 0;
+  let currentWord = 0;
+  let totalTyped = 0;
+  let correctTyped = 0;
+  let totalErrors = 0;
 
-  let testStarted = false;
-  let testFinished = false;
-  let timeRemaining = testDuration;
-  let timerInterval = null;
+  let started = false;
+  let finished = false;
 
-  // Current line information
-  let currentLine = [];
-  let currentLineIndex = 0;
-  let previousLineTop = null;
+  let timeLeft = duration;
+  let timer = null;
+
+  // The number of words that belong to the
+  // current visual line.
+  let lineStarts = [];
 
   // --------------------------------------------------
-  // CREATE WORDS
+  // GENERATE WORDS
   // --------------------------------------------------
 
-  function generateWords(count = 250) {
+  function generateWords(amount = 300) {
     const result = [];
 
-    for (let i = 0; i < count; i++) {
-      result.push(words[Math.floor(Math.random() * words.length)]);
+    for (let i = 0; i < amount; i++) {
+      result.push(
+        wordBank[Math.floor(Math.random() * wordBank.length)]
+      );
     }
 
     return result;
   }
 
   // --------------------------------------------------
-  // RENDER TEXT
+  // BUILD PASSAGE
   // --------------------------------------------------
 
-  function renderText() {
-    textDisplay.innerHTML = "";
+  function buildPassage() {
+    display.innerHTML = "";
 
-    const fragment = document.createDocumentFragment();
-
-    testWords.forEach((word, index) => {
+    words.forEach((word, index) => {
       const span = document.createElement("span");
 
-      span.className = "typing-word";
+      span.className = "word";
       span.dataset.index = index;
       span.textContent = word;
 
-      fragment.appendChild(span);
+      display.appendChild(span);
 
-      if (index < testWords.length - 1) {
-        fragment.appendChild(document.createTextNode(" "));
+      if (index < words.length - 1) {
+        display.appendChild(document.createTextNode(" "));
       }
     });
 
-    textDisplay.appendChild(fragment);
-
-    currentLine = [];
-    currentLineIndex = 0;
-
-    requestAnimationFrame(updateCurrentLine);
+    // Wait until the browser has laid out the text.
+    requestAnimationFrame(() => {
+      calculateLines();
+      updateCurrentWord();
+    });
   }
 
   // --------------------------------------------------
-  // FIND CURRENT LINE
+  // CALCULATE VISUAL LINES
   // --------------------------------------------------
 
-  function getLineWords() {
-    const wordElements = [...textDisplay.querySelectorAll(".typing-word")];
+  function calculateLines() {
+    const wordElements = [...display.querySelectorAll(".word")];
 
-    if (!wordElements.length) {
-      return [];
-    }
+    lineStarts = [];
 
-    const lines = [];
-    let currentTop = null;
-    let line = [];
+    let previousTop = null;
 
-    wordElements.forEach((element) => {
-      const top = Math.round(element.getBoundingClientRect().top);
+    wordElements.forEach((word, index) => {
+      const top = Math.round(word.offsetTop);
 
-      if (currentTop === null) {
-        currentTop = top;
-        line = [element];
-        return;
-      }
-
-      if (Math.abs(top - currentTop) <= 3) {
-        line.push(element);
-      } else {
-        lines.push(line);
-        line = [element];
-        currentTop = top;
+      if (previousTop === null || top !== previousTop) {
+        lineStarts.push(index);
+        previousTop = top;
       }
     });
-
-    if (line.length) {
-      lines.push(line);
-    }
-
-    return lines;
   }
 
   // --------------------------------------------------
-  // UPDATE CURRENT LINE
+  // CURRENT LINE
   // --------------------------------------------------
 
-  function updateCurrentLine() {
-    const lines = getLineWords();
+  function getCurrentLine() {
+    let line = 0;
 
-    if (!lines.length) return;
-
-    let activeLineNumber = 0;
-
-    for (let i = 0; i < lines.length; i++) {
-      const containsCurrentWord = lines[i].some(
-        (element) =>
-          parseInt(element.dataset.index, 10) === currentWordIndex
-      );
-
-      if (containsCurrentWord) {
-        activeLineNumber = i;
-        break;
+    for (let i = 0; i < lineStarts.length; i++) {
+      if (currentWord >= lineStarts[i]) {
+        line = i;
       }
     }
 
-    // Remove old line classes
-    textDisplay
-      .querySelectorAll(".typing-line-active")
-      .forEach((el) => el.classList.remove("typing-line-active"));
-
-    // Highlight the active line
-    lines[activeLineNumber].forEach((element) => {
-      element.classList.add("typing-line-active");
-    });
-
-    currentLine = lines[activeLineNumber];
-    currentLineIndex = activeLineNumber;
-
-    // ----------------------------------------------
-    // ROLL THE TEXT UP
-    // ----------------------------------------------
-    //
-    // Once we move to a new line, the previous line
-    // is shifted upward.
-    //
-    // We do NOT scroll the whole page/container.
-    //
-
-    if (
-      previousLineTop !== null &&
-      currentLine.length &&
-      currentLine[0]
-    ) {
-      const newTop = currentLine[0].getBoundingClientRect().top;
-
-      if (newTop > previousLineTop + 5) {
-        const shiftAmount = newTop - previousLineTop;
-
-        textDisplay.style.transform =
-          `translateY(-${shiftAmount}px)`;
-
-        // After the animation, keep the new line positioned
-        // where the old line was.
-        requestAnimationFrame(() => {
-          textDisplay.style.transition =
-            "transform 0.28s ease";
-
-          textDisplay.style.transform =
-            "translateY(-" + shiftAmount + "px)";
-        });
-      }
-    }
-
-    if (currentLine.length) {
-      previousLineTop =
-        currentLine[0].getBoundingClientRect().top;
-    }
+    return line;
   }
 
   // --------------------------------------------------
-  // UPDATE WORD DISPLAY
+  // KEEP CURRENT LINE IN PLACE
   // --------------------------------------------------
 
-  function updateWordDisplay() {
-    const wordElements =
-      textDisplay.querySelectorAll(".typing-word");
+  function updateCurrentWord() {
+    const wordElements = display.querySelectorAll(".word");
 
-    wordElements.forEach((element, index) => {
-      element.classList.remove(
+    wordElements.forEach((word, index) => {
+      word.classList.remove(
+        "current",
         "correct",
-        "incorrect",
-        "current"
+        "wrong"
       );
 
-      if (index < currentWordIndex) {
-        element.classList.add("correct");
-      } else if (index === currentWordIndex) {
-        element.classList.add("current");
+      if (index === currentWord) {
+        word.classList.add("current");
       }
     });
-
-    requestAnimationFrame(updateCurrentLine);
   }
 
   // --------------------------------------------------
-  // START TEST
+  // ROLL TO NEXT LINE
   // --------------------------------------------------
 
-  function startTest() {
-    if (testStarted && !testFinished) return;
+  function rollToLine(lineNumber) {
+    const wordElements = display.querySelectorAll(".word");
 
-    testDuration = parseInt(timeSelect?.value || "60", 10);
+    if (!wordElements.length) return;
 
-    testWords = generateWords(300);
+    const targetIndex = lineStarts[lineNumber];
 
-    currentWordIndex = 0;
-    typedCharacters = 0;
-    correctCharacters = 0;
-    errors = 0;
+    if (targetIndex === undefined) return;
 
-    testStarted = true;
-    testFinished = false;
-    timeRemaining = testDuration;
+    const targetWord = wordElements[targetIndex];
 
-    previousLineTop = null;
+    // The amount the passage needs to move upward.
+    const amount = targetWord.offsetTop;
 
-    if (textDisplay) {
-      textDisplay.style.transform = "translateY(0)";
-      textDisplay.style.transition = "none";
-    }
-
-    renderText();
-
-    if (input) {
-      input.value = "";
-      input.disabled = false;
-      input.focus();
-    }
-
-    updateStats();
-
-    clearInterval(timerInterval);
-
-    timerInterval = setInterval(() => {
-      timeRemaining--;
-
-      if (timeRemaining < 0) {
-        finishTest();
-        return;
-      }
-
-      updateStats();
-
-      if (timeDisplay) {
-        timeDisplay.textContent = timeRemaining;
-      }
-    }, 1000);
-
-    if (timeDisplay) {
-      timeDisplay.textContent = timeRemaining;
-    }
+    display.style.transition = "transform 280ms ease";
+    display.style.transform = `translateY(-${amount}px)`;
   }
 
   // --------------------------------------------------
-  // HANDLE TYPING
+  // HANDLE INPUT
   // --------------------------------------------------
 
   function handleInput() {
-    if (!testStarted || testFinished) return;
+    if (!started || finished) return;
 
-    const value = input.value;
-    const targetWord = testWords[currentWordIndex];
+    const typed = input.value;
+    const target = words[currentWord];
 
-    if (!targetWord) {
+    if (!target) {
       finishTest();
       return;
     }
 
-    // Do not allow typing beyond the current word.
-    if (value.length > targetWord.length) {
-      input.value = value.substring(0, targetWord.length);
+    // Prevent typing beyond the word.
+    if (typed.length > target.length) {
+      input.value = typed.slice(0, target.length);
       return;
     }
 
-    // Count characters
-    typedCharacters = 0;
-    correctCharacters = 0;
-    errors = 0;
+    // Count this word's characters.
+    totalTyped = 0;
+    correctTyped = 0;
+    totalErrors = 0;
 
-    for (let i = 0; i < currentWordIndex; i++) {
-      typedCharacters += testWords[i].length;
-      correctCharacters += testWords[i].length;
+    // Completed words.
+    for (let i = 0; i < currentWord; i++) {
+      totalTyped += words[i].length;
+      correctTyped += words[i].length;
     }
 
-    typedCharacters += value.length;
+    // Current word.
+    totalTyped += typed.length;
 
-    // Check current word character by character
-    for (let i = 0; i < value.length; i++) {
-      if (value[i] === targetWord[i]) {
-        correctCharacters++;
+    for (let i = 0; i < typed.length; i++) {
+      if (typed[i] === target[i]) {
+        correctTyped++;
       } else {
-        errors++;
+        totalErrors++;
       }
     }
 
-    // If the entire word is correct, move forward.
-    if (
-      value.length === targetWord.length &&
-      value === targetWord
-    ) {
-      currentWordIndex++;
+    // Update current word appearance.
+    const currentElement =
+      display.querySelector(
+        `.word[data-index="${currentWord}"]`
+      );
+
+    if (currentElement) {
+      currentElement.classList.remove("wrong");
+
+      if (
+        typed.length > 0 &&
+        typed !== target.substring(0, typed.length)
+      ) {
+        currentElement.classList.add("wrong");
+      }
+    }
+
+    // ------------------------------------------------
+    // WORD FINISHED
+    // ------------------------------------------------
+
+    if (typed === target) {
+      currentElement?.classList.remove("current");
+      currentElement?.classList.add("correct");
+
+      currentWord++;
 
       input.value = "";
 
-      updateWordDisplay();
+      // Determine whether we moved onto a new line.
+      const oldLine = getCurrentLine();
 
-      if (currentWordIndex >= testWords.length) {
+      requestAnimationFrame(() => {
+        const newLine = getCurrentLine();
+
+        if (newLine > oldLine) {
+          rollToLine(newLine);
+        }
+
+        updateCurrentWord();
+      });
+
+      if (currentWord >= words.length - 1) {
         finishTest();
         return;
       }
@@ -374,28 +290,43 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // --------------------------------------------------
-  // HANDLE SPACE
+  // SPACE KEY
   // --------------------------------------------------
 
   function handleKeydown(event) {
-    if (!testStarted || testFinished) return;
+    if (!started || finished) return;
 
-    if (event.key === " " || event.code === "Space") {
+    if (event.key === " ") {
       event.preventDefault();
 
-      const value = input.value;
-      const targetWord = testWords[currentWordIndex];
+      const typed = input.value;
+      const target = words[currentWord];
 
-      if (value === targetWord) {
-        currentWordIndex++;
-
+      // Only advance when the word is completely correct.
+      if (typed === target) {
         input.value = "";
 
-        updateWordDisplay();
+        const currentElement =
+          display.querySelector(
+            `.word[data-index="${currentWord}"]`
+          );
 
-        if (currentWordIndex >= testWords.length) {
-          finishTest();
-        }
+        currentElement?.classList.remove("current");
+        currentElement?.classList.add("correct");
+
+        const oldLine = getCurrentLine();
+
+        currentWord++;
+
+        requestAnimationFrame(() => {
+          const newLine = getCurrentLine();
+
+          if (newLine > oldLine) {
+            rollToLine(newLine);
+          }
+
+          updateCurrentWord();
+        });
       }
     }
   }
@@ -405,34 +336,77 @@ document.addEventListener("DOMContentLoaded", () => {
   // --------------------------------------------------
 
   function updateStats() {
-    const elapsedSeconds =
-      Math.max(1, testDuration - timeRemaining);
+    const elapsed = Math.max(
+      1,
+      duration - timeLeft
+    );
 
-    const minutes = elapsedSeconds / 60;
+    const minutes = elapsed / 60;
 
     const wpm =
       minutes > 0
-        ? Math.round((correctCharacters / 5) / minutes)
+        ? Math.round((correctTyped / 5) / minutes)
         : 0;
 
     const accuracy =
-      typedCharacters > 0
+      totalTyped > 0
         ? Math.round(
-            (correctCharacters / typedCharacters) * 100
+            (correctTyped / totalTyped) * 100
           )
         : 100;
 
-    if (wpmDisplay) {
-      wpmDisplay.textContent = wpm;
-    }
+    wpmEl.textContent = wpm;
+    accuracyEl.textContent = accuracy + "%";
+    errorsEl.textContent = totalErrors;
+    timeEl.textContent = timeLeft;
+  }
 
-    if (accuracyDisplay) {
-      accuracyDisplay.textContent = accuracy + "%";
-    }
+  // --------------------------------------------------
+  // START
+  // --------------------------------------------------
 
-    if (timeDisplay) {
-      timeDisplay.textContent = timeRemaining;
-    }
+  function startTest() {
+    clearInterval(timer);
+
+    duration = parseInt(
+      document.querySelector(".dur button.active")?.dataset.time || "30",
+      10
+    );
+
+    words = generateWords(300);
+
+    currentWord = 0;
+    totalTyped = 0;
+    correctTyped = 0;
+    totalErrors = 0;
+
+    timeLeft = duration;
+
+    started = true;
+    finished = false;
+
+    display.style.transition = "none";
+    display.style.transform = "translateY(0)";
+
+    buildPassage();
+
+    input.disabled = false;
+    input.value = "";
+    input.focus();
+
+    results.classList.add("hidden");
+
+    updateStats();
+
+    timer = setInterval(() => {
+      timeLeft--;
+
+      updateStats();
+
+      if (timeLeft <= 0) {
+        finishTest();
+      }
+    }, 1000);
   }
 
   // --------------------------------------------------
@@ -440,18 +414,24 @@ document.addEventListener("DOMContentLoaded", () => {
   // --------------------------------------------------
 
   function finishTest() {
-    if (testFinished) return;
+    if (finished) return;
 
-    testFinished = true;
-    testStarted = false;
+    finished = true;
+    started = false;
 
-    clearInterval(timerInterval);
+    clearInterval(timer);
 
-    if (input) {
-      input.disabled = true;
-    }
+    input.disabled = true;
 
     updateStats();
+
+    fwpm.textContent = wpmEl.textContent;
+    facc.textContent = accuracyEl.textContent;
+    ferr.textContent = errorsEl.textContent;
+    fchars.textContent = totalTyped;
+    fdur.textContent = duration + "s";
+
+    results.classList.remove("hidden");
   }
 
   // --------------------------------------------------
@@ -459,101 +439,97 @@ document.addEventListener("DOMContentLoaded", () => {
   // --------------------------------------------------
 
   function resetTest() {
-    clearInterval(timerInterval);
+    clearInterval(timer);
 
-    testStarted = false;
-    testFinished = false;
+    started = false;
+    finished = false;
 
-    currentWordIndex = 0;
-    typedCharacters = 0;
-    correctCharacters = 0;
-    errors = 0;
+    currentWord = 0;
+    totalTyped = 0;
+    correctTyped = 0;
+    totalErrors = 0;
 
-    testDuration = parseInt(timeSelect?.value || "60", 10);
-    timeRemaining = testDuration;
+    timeLeft = duration;
 
-    previousLineTop = null;
+    input.value = "";
+    input.disabled = true;
 
-    if (textDisplay) {
-      textDisplay.style.transition = "none";
-      textDisplay.style.transform = "translateY(0)";
-    }
+    display.style.transition = "none";
+    display.style.transform = "translateY(0)";
 
-    if (input) {
-      input.value = "";
-      input.disabled = true;
-    }
+    words = generateWords(300);
+    buildPassage();
 
-    testWords = generateWords(300);
-
-    renderText();
-
-    if (timeDisplay) {
-      timeDisplay.textContent = timeRemaining;
-    }
+    results.classList.add("hidden");
 
     updateStats();
   }
 
   // --------------------------------------------------
-  // TIME SELECT
+  // DURATION BUTTONS
   // --------------------------------------------------
 
-  if (timeSelect) {
-    timeSelect.addEventListener("change", () => {
-      if (!testStarted) {
-        testDuration =
-          parseInt(timeSelect.value || "60", 10);
+  timeButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      timeButtons.forEach(b =>
+        b.classList.remove("active")
+      );
 
-        timeRemaining = testDuration;
+      button.classList.add("active");
 
-        if (timeDisplay) {
-          timeDisplay.textContent = timeRemaining;
-        }
+      if (!started) {
+        duration = parseInt(button.dataset.time, 10);
+        timeLeft = duration;
+        updateStats();
       }
     });
-  }
+  });
 
   // --------------------------------------------------
-  // BUTTONS
+  // MODE BUTTONS
   // --------------------------------------------------
 
-  if (startButton) {
-    startButton.addEventListener("click", startTest);
-  }
+  modeButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      modeButtons.forEach(b =>
+        b.classList.remove("active")
+      );
 
-  if (resetButton) {
-    resetButton.addEventListener("click", resetTest);
-  }
-
-  // --------------------------------------------------
-  // INPUT
-  // --------------------------------------------------
-
-  if (input) {
-    input.addEventListener("input", handleInput);
-    input.addEventListener("keydown", handleKeydown);
-  }
+      button.classList.add("active");
+    });
+  });
 
   // --------------------------------------------------
-  // INITIAL LOAD
+  // EVENTS
   // --------------------------------------------------
 
-  testWords = generateWords(300);
-  renderText();
+  input.addEventListener("input", handleInput);
+  input.addEventListener("keydown", handleKeydown);
 
-  if (input) {
-    input.disabled = true;
-  }
+  restartBtn.addEventListener("click", resetTest);
 
-  if (timeDisplay) {
-    timeDisplay.textContent = timeRemaining;
-  }
+  againBtn.addEventListener("click", () => {
+    results.classList.add("hidden");
+    startTest();
+  });
 
+  // --------------------------------------------------
+  // INITIAL STATE
+  // --------------------------------------------------
+
+  duration = 30;
+  timeLeft = 30;
+
+  words = generateWords(300);
+
+  input.disabled = true;
+
+  buildPassage();
   updateStats();
 });
-```
 
-**One important thing:** this JavaScript assumes your existing HTML IDs are still `text-display`, `typing-input`, `time-select`, `start-btn`, `reset-btn`, `timer`, `wpm`, and `accuracy`.
-
-If the words **still don't physically move upward** after replacing this, then the remaining problem is in the **CSS**, not `script.js`. In that case, send me your current `style.css` and I'll fix the scrolling animation there rather than making you keep replacing JavaScript.
+ 
+ 
+ 
+ 
+ 
